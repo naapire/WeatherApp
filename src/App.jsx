@@ -12,7 +12,7 @@ import WeatherCard  from "./components/WeatherCard";
 import ForecastCard from "./components/ForecastCard";
 import MapView      from "./components/MapView";
 import NearbyCities from "./components/NearbyCities";
-import PinnedCities from "./components/PinnedCities";
+import PinnedCities from "./components/Pinnedcities";
 
 export default function App() {
   const [city,      setCity]      = useState("Accra");
