@@ -12,6 +12,12 @@ export default function Header({ city, setCity, geoLoading, handleLocateMe, T })
   const searchRef    = useRef(null);
   const suggestTimer = useRef(null);
 
+  // FIX: tracks whether the mouse is currently anywhere inside the search
+  // wrapper, INCLUDING the dropdown itself (since the dropdown is a child
+  // of searchRef's div). onBlur checks this before closing, so moving the
+  // mouse from the input down into the list no longer makes it disappear.
+  const isHoveringRef = useRef(false);
+
   useEffect(() => {
     const t = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(t);
@@ -74,8 +80,14 @@ export default function Header({ city, setCity, geoLoading, handleLocateMe, T })
       <div
         ref={searchRef}
         style={{ position: "relative", flex: 1, minWidth: 0 }}
-        onMouseEnter={() => { if (!input.trim() && !showSug) setShowHint(true); }}
-        onMouseLeave={() => { if (!input.trim()) setShowHint(false); }}
+        onMouseEnter={() => {
+          isHoveringRef.current = true;
+          if (!input.trim() && !showSug) setShowHint(true);
+        }}
+        onMouseLeave={() => {
+          isHoveringRef.current = false;
+          if (!input.trim()) setShowHint(false);
+        }}
       >
         <div style={{
           display: "flex", alignItems: "center", gap: 10,
@@ -89,7 +101,12 @@ export default function Header({ city, setCity, geoLoading, handleLocateMe, T })
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             onFocus={() => { if (!input.trim()) setShowHint(true); else if (suggestions.length) setShowSug(true); }}
-            onBlur={() => setTimeout(() => { setShowHint(false); setShowSug(false); }, 150)}
+            onBlur={() => setTimeout(() => {
+              // FIX: only close if the mouse isn't currently over the
+              // dropdown — previously this fired unconditionally and
+              // cancelled the hover-open state before a click could land.
+              if (!isHoveringRef.current) { setShowHint(false); setShowSug(false); }
+            }, 120)}
             placeholder="Search for a city..."
             style={{ flex: 1, border: "none", outline: "none", background: "transparent", color: T.text, fontSize: 14, minWidth: 0 }}
           />

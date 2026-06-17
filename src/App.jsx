@@ -4,6 +4,7 @@ import "./styles/global.css";
 import { getTheme }       from "./utils/theme";
 import { useWeather }     from "./hooks/useWeather";
 import { useGeolocation } from "./hooks/useGeolocation";
+import { usePinnedCities } from "./hooks/usePinnedCities";
 
 import Sidebar      from "./components/Sidebar";
 import Header       from "./components/Header";
@@ -11,18 +12,28 @@ import WeatherCard  from "./components/WeatherCard";
 import ForecastCard from "./components/ForecastCard";
 import MapView      from "./components/MapView";
 import NearbyCities from "./components/NearbyCities";
+import PinnedCities from "./components/PinnedCities";
 
 export default function App() {
   const [city,      setCity]      = useState("Accra");
   const [darkMode,  setDarkMode]  = useState(false);
   const [activeNav, setActiveNav] = useState("dashboard");
 
-  const { locationGranted, geoLoading, detectedCity, userCountry, setUserCountry, handleLocateMe } = useGeolocation();
+  const {
+    locationGranted, geoLoading, detectedCity, userCountry, setUserCountry,
+    handleLocateMe, lastCoords,
+  } = useGeolocation();
+
   const { weather, forecast, loading, error } = useWeather(city);
+  const { pinnedCities, isPinned, togglePin } = usePinnedCities();
 
   useEffect(() => { if (detectedCity) setCity(detectedCity); }, [detectedCity]);
+
+  // FIX: removed the `!userCountry` guard — it was only ever letting this
+  // run once, which is why Nearby Cities stayed stuck on the first country
+  // (e.g. "GH") even after searching a city in a different country.
   useEffect(() => {
-    if (weather?.sys?.country && !userCountry) setUserCountry(weather.sys.country);
+    if (weather?.sys?.country) setUserCountry(weather.sys.country);
   }, [weather]);
 
   const T          = getTheme(darkMode);
@@ -78,16 +89,26 @@ export default function App() {
             ...(mapVisible ? { width: 260, flexShrink: 0 } : { flex: 1 }),
             display: "flex", flexDirection: "column", gap: 14, transition: "all 0.4s ease",
           }}>
-            <WeatherCard weather={weather} loading={loading} error={error} mapVisible={mapVisible} T={T} />
+            <WeatherCard
+              weather={weather} loading={loading} error={error} mapVisible={mapVisible}
+              isPinned={isPinned} togglePin={togglePin} T={T}
+            />
+            <PinnedCities pinnedCities={pinnedCities} city={city} setCity={setCity} togglePin={togglePin} T={T} />
             <ForecastCard forecast={forecast} loading={loading} T={T} />
           </div>
 
-          {mapVisible && <MapView weather={weather} darkMode={darkMode} locationGranted={locationGranted} T={T} />}
+          {mapVisible && (
+            <MapView
+              weather={weather} darkMode={darkMode} locationGranted={locationGranted}
+              lastCoords={lastCoords} T={T}
+            />
+          )}
 
           {mapVisible && (
             <NearbyCities
               weather={weather} city={city} setCity={setCity}
-              userCountry={userCountry} locationGranted={locationGranted} T={T}
+              userCountry={userCountry} locationGranted={locationGranted}
+              isPinned={isPinned} togglePin={togglePin} T={T}
             />
           )}
         </div>
@@ -99,7 +120,11 @@ export default function App() {
           {/* Weather tab */}
           {(showWeather || !mapVisible) && activeNav !== "map" && activeNav !== "compass" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 14, overflowY: "auto", paddingBottom: 8 }}>
-              <WeatherCard weather={weather} loading={loading} error={error} mapVisible={false} T={T} />
+              <WeatherCard
+                weather={weather} loading={loading} error={error} mapVisible={false}
+                isPinned={isPinned} togglePin={togglePin} T={T}
+              />
+              <PinnedCities pinnedCities={pinnedCities} city={city} setCity={setCity} togglePin={togglePin} T={T} />
               <ForecastCard forecast={forecast} loading={loading} T={T} />
             </div>
           )}
@@ -107,7 +132,10 @@ export default function App() {
           {/* Map tab */}
           {showMap && (
             <div style={{ flex: 1, minHeight: 0 }}>
-              <MapView weather={weather} darkMode={darkMode} locationGranted={locationGranted} T={T} />
+              <MapView
+                weather={weather} darkMode={darkMode} locationGranted={locationGranted}
+                lastCoords={lastCoords} T={T}
+              />
             </div>
           )}
 
@@ -116,7 +144,8 @@ export default function App() {
             <div style={{ overflowY: "auto", flex: 1 }}>
               <NearbyCities
                 weather={weather} city={city} setCity={setCity}
-                userCountry={userCountry} locationGranted={locationGranted} T={T}
+                userCountry={userCountry} locationGranted={locationGranted}
+                isPinned={isPinned} togglePin={togglePin} T={T}
               />
             </div>
           )}
@@ -126,7 +155,10 @@ export default function App() {
             <div style={{
               flex: 1, display: "flex", flexDirection: "column", gap: 14, overflowY: "auto",
             }}>
-              <WeatherCard weather={weather} loading={loading} error={error} mapVisible={false} T={T} />
+              <WeatherCard
+                weather={weather} loading={loading} error={error} mapVisible={false}
+                isPinned={isPinned} togglePin={togglePin} T={T}
+              />
               <ForecastCard forecast={forecast} loading={loading} T={T} />
             </div>
           )}

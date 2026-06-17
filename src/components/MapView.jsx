@@ -3,10 +3,12 @@ import { MapPin } from "lucide-react";
 import { useMapbox } from "../hooks/useMapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 
-export default function MapView({ weather, darkMode, locationGranted, T }) {
+export default function MapView({ weather, darkMode, locationGranted, lastCoords, T }) {
   const containerRef = useRef(null);
 
-  useMapbox({ containerRef, weather, darkMode, locationGranted });
+  // FIX: lastCoords passed through so useMapbox can fly to "My Location"
+  // GPS coordinates directly, instead of only reacting to `weather`.
+  useMapbox({ containerRef, weather, darkMode, locationGranted, lastCoords });
 
   return (
     <div style={{

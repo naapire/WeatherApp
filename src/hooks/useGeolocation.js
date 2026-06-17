@@ -16,6 +16,12 @@ export function useGeolocation() {
   const [detectedCity,    setDetectedCity]    = useState(null);
   const [userCountry,     setUserCountry]     = useState(null);
 
+  // FIX: raw {lat, lon} from the browser's GPS, refreshed every time
+  // geolocation succeeds — including from the "My Location" button.
+  // This is what lets MapView fly to the right spot even when the
+  // resolved city name is unchanged (so `weather` doesn't refetch).
+  const [lastCoords, setLastCoords] = useState(null);
+
   // Ask once on mount
   useEffect(() => {
     if (!navigator.geolocation) { setLocationGranted(false); return; }
@@ -23,6 +29,7 @@ export function useGeolocation() {
     navigator.geolocation.getCurrentPosition(
       async ({ coords: { latitude, longitude } }) => {
         setLocationGranted(true);
+        setLastCoords({ lat: latitude, lon: longitude });
         try {
           const { city, country } = await reverseGeocode(latitude, longitude);
           if (city)    setDetectedCity(city);
@@ -41,6 +48,10 @@ export function useGeolocation() {
     navigator.geolocation.getCurrentPosition(
       async ({ coords: { latitude, longitude } }) => {
         setLocationGranted(true);
+        // FIX: always update lastCoords with a fresh object reference so
+        // MapView's effect (which depends on lastCoords) fires every click,
+        // even if the lat/lon values happen to be identical to before.
+        setLastCoords({ lat: latitude, lon: longitude, t: Date.now() });
         try {
           const { city, country } = await reverseGeocode(latitude, longitude);
           if (city)    setDetectedCity(city);
@@ -52,5 +63,5 @@ export function useGeolocation() {
     );
   };
 
-  return { locationGranted, geoLoading, detectedCity, userCountry, setUserCountry, handleLocateMe };
+  return { locationGranted, geoLoading, detectedCity, userCountry, setUserCountry, handleLocateMe, lastCoords };
 }

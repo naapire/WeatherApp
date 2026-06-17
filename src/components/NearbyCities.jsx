@@ -2,7 +2,7 @@ import { Cloud, AlertCircle, Loader2, Star } from "lucide-react";
 import { getConditionMeta } from "../constants";
 import { useNearbyCities } from "../hooks/useNearbyCities";
 
-export default function NearbyCities({ weather, city, setCity, userCountry, locationGranted, T }) {
+export default function NearbyCities({ weather, city, setCity, userCountry, locationGranted, isPinned, togglePin, T }) {
   const { nearbyCities, nearbyLoading, nearbyError } = useNearbyCities(weather);
 
   return (
@@ -64,31 +64,46 @@ export default function NearbyCities({ weather, city, setCity, userCountry, loca
           ? getConditionMeta(cond.id)
           : { Icon: Cloud, desc: "—", color: T.muted };
         const isSelected = item.name.toLowerCase() === city.toLowerCase();
+        const pinned = isPinned(item.name);
 
         return (
-          <button
-            key={item.id}
-            onClick={() => setCity(item.name)}
-            style={{
-              display: "flex", alignItems: "center", gap: 10, padding: "9px 10px",
-              borderRadius: 12, border: "none", cursor: "pointer", width: "100%",
-              textAlign: "left", transition: "background 0.2s",
-              background: isSelected ? T.accentBg : T.rowBg,
-            }}
-            onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = T.hover; }}
-            onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = T.rowBg; }}
-          >
-            <CI size={20} color={cc} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: T.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {item.name}
+          <div key={item.id} style={{
+            display: "flex", alignItems: "center", gap: 4,
+            borderRadius: 12, background: isSelected ? T.accentBg : T.rowBg,
+          }}>
+            <button
+              onClick={() => setCity(item.name)}
+              style={{
+                display: "flex", alignItems: "center", gap: 10, padding: "9px 10px",
+                border: "none", background: "transparent", cursor: "pointer",
+                flex: 1, textAlign: "left", minWidth: 0,
+              }}
+            >
+              <CI size={20} color={cc} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: T.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {item.name}
+                </div>
+                <div style={{ fontSize: 11, color: T.muted }}>{desc}</div>
               </div>
-              <div style={{ fontSize: 11, color: T.muted }}>{desc}</div>
-            </div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: T.text, flexShrink: 0 }}>
-              {item.main ? `${Math.round(item.main.temp)}°` : "—"}
-            </div>
-          </button>
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.text, flexShrink: 0 }}>
+                {item.main ? `${Math.round(item.main.temp)}°` : "—"}
+              </div>
+            </button>
+
+            {/* Pin/unpin button */}
+            <button
+              onClick={() => togglePin(item.name, item.country)}
+              title={pinned ? "Unpin" : "Pin for quick access"}
+              style={{
+                width: 26, height: 26, border: "none", background: "transparent",
+                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                flexShrink: 0, marginRight: 6,
+              }}
+            >
+              <Star size={14} color={pinned ? "#fbbf24" : T.muted} fill={pinned ? "#fbbf24" : "none"} />
+            </button>
+          </div>
         );
       })}
 
@@ -97,7 +112,7 @@ export default function NearbyCities({ weather, city, setCity, userCountry, loca
         <div style={{ background: "linear-gradient(135deg,#1a6eb5,#0ea5e9)", borderRadius: 14, padding: 14, color: "white" }}>
           <Star size={16} style={{ marginBottom: 6, opacity: 0.9 }} />
           <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Save Locations</div>
-          <div style={{ fontSize: 11, opacity: 0.8, lineHeight: 1.5 }}>Pin your favourite cities for quick access.</div>
+          <div style={{ fontSize: 11, opacity: 0.8, lineHeight: 1.5 }}>Tap the star on any city to pin it for quick access.</div>
         </div>
       </div>
     </div>
