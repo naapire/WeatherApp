@@ -18,6 +18,28 @@ export default function Header({ city, setCity, geoLoading, handleLocateMe, T })
   // mouse from the input down into the list no longer makes it disappear.
   const isHoveringRef = useRef(false);
 
+  // FIX: closing the dropdown on mouseleave used to fire instantly the
+  // moment the cursor crossed the small visual gap between the input box
+  // and the dropdown below it (that gap isn't covered by either element,
+  // so the cursor briefly "leaves" the wrapper). We now delay the close
+  // slightly; if the cursor lands back inside the wrapper (e.g. on the
+  // dropdown) before the timer fires, the close gets cancelled.
+  const closeTimerRef = useRef(null);
+
+  const cancelClose = () => {
+    clearTimeout(closeTimerRef.current);
+    isHoveringRef.current = true;
+  };
+
+  const scheduleClose = () => {
+    isHoveringRef.current = false;
+    clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = setTimeout(() => {
+      setShowHint(false);
+      setShowSug(false);
+    }, 200);
+  };
+
   useEffect(() => {
     const t = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(t);
@@ -33,6 +55,9 @@ export default function Header({ city, setCity, geoLoading, handleLocateMe, T })
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  // Clean up any pending close timer on unmount.
+  useEffect(() => () => clearTimeout(closeTimerRef.current), []);
 
   const handleInputChange = (e) => {
     const val = e.target.value;
@@ -81,13 +106,10 @@ export default function Header({ city, setCity, geoLoading, handleLocateMe, T })
         ref={searchRef}
         style={{ position: "relative", flex: 1, minWidth: 0 }}
         onMouseEnter={() => {
-          isHoveringRef.current = true;
+          cancelClose();
           if (!input.trim() && !showSug) setShowHint(true);
         }}
-        onMouseLeave={() => {
-          isHoveringRef.current = false;
-          if (!input.trim()) setShowHint(false);
-        }}
+        onMouseLeave={scheduleClose}
       >
         <div style={{
           display: "flex", alignItems: "center", gap: 10,

@@ -28,7 +28,11 @@ export function useNearbyCities(weather) {
         );
         const geoJson = await geoRes.json();
 
-        if (geoJson.errors || !geoJson.data) {
+        // FIX: geoJson.errors is sometimes an empty array [] on success.
+        // An empty array is truthy in JS, so the old check `geoJson.errors`
+        // was firing the error state even when data loaded fine.
+        // Now we check .length so only a non-empty errors array triggers it.
+        if (geoJson.errors?.length || !geoJson.data) {
           setNearbyError("Could not load nearby cities.");
           return;
         }
