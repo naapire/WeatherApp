@@ -6,7 +6,6 @@ const OWM_KEY = import.meta.env.VITE_WEATHER_API_KEY;
 export function useNearbyCities(weather) {
   const [nearbyCities,  setNearbyCities]  = useState([]);
   const [nearbyLoading, setNearbyLoading] = useState(false);
-  const [nearbyError,   setNearbyError]   = useState("");
 
   useEffect(() => {
     if (!weather?.coord) return;
@@ -15,7 +14,6 @@ export function useNearbyCities(weather) {
 
     const fetchNearby = async () => {
       setNearbyLoading(true);
-      setNearbyError("");
       setNearbyCities([]);
 
       try {
@@ -28,14 +26,8 @@ export function useNearbyCities(weather) {
         );
         const geoJson = await geoRes.json();
 
-        // FIX: geoJson.errors is sometimes an empty array [] on success.
-        // An empty array is truthy in JS, so the old check `geoJson.errors`
-        // was firing the error state even when data loaded fine.
-        // Now we check .length so only a non-empty errors array triggers it.
-        if (geoJson.errors?.length || !geoJson.data) {
-          setNearbyError("Could not load nearby cities.");
-          return;
-        }
+        // If there's no data array at all, just leave the list empty — no error shown
+        if (!geoJson.data) return;
 
         const candidates = geoJson.data
           .filter(c => c.city.toLowerCase() !== currentCity.toLowerCase())
@@ -49,21 +41,27 @@ export function useNearbyCities(weather) {
               );
               const wJson = await wRes.json();
               if (wJson.cod !== 200) return null;
-              return { id: c.id, name: c.city, country: c.countryCode, main: wJson.main, weather: wJson.weather };
+              return {
+                id: c.id, name: c.city, country: c.countryCode,
+                main: wJson.main, weather: wJson.weather,
+              };
             } catch { return null; }
           })
         );
 
         setNearbyCities(withWeather.filter(Boolean));
-      } catch (err) {
-        setNearbyError(`Failed to load: ${err.message}`);
+      } catch {
+        // Silently fail — leave the list empty, no error message shown
       } finally {
         setNearbyLoading(false);
       }
     };
 
     fetchNearby();
+
+  // Re-runs whenever the city changes — covers both manual search AND
+  // My Location button, since both ultimately update weather.coord
   }, [weather?.coord?.lat, weather?.coord?.lon]);
 
-  return { nearbyCities, nearbyLoading, nearbyError };
+  return { nearbyCities, nearbyLoading };
 }

@@ -1,9 +1,9 @@
-import { Cloud, AlertCircle, Loader2, Star } from "lucide-react";
+import { Cloud, Loader2, Star } from "lucide-react";
 import { getConditionMeta } from "../constants";
 import { useNearbyCities } from "../hooks/useNearbyCities";
 
 export default function NearbyCities({ weather, city, setCity, userCountry, locationGranted, isPinned, togglePin, T }) {
-  const { nearbyCities, nearbyLoading, nearbyError } = useNearbyCities(weather);
+  const { nearbyCities, nearbyLoading } = useNearbyCities(weather);
 
   return (
     <div style={{
@@ -22,13 +22,6 @@ export default function NearbyCities({ weather, city, setCity, userCountry, loca
         )}
       </div>
 
-      {/* Error */}
-      {nearbyError && (
-        <div style={{ fontSize: 11, color: "#f87171", background: "rgba(248,113,113,0.1)", padding: "8px 10px", borderRadius: 10, lineHeight: 1.5 }}>
-          <AlertCircle size={12} style={{ marginRight: 4 }} />{nearbyError}
-        </div>
-      )}
-
       {/* Loading skeletons */}
       {nearbyLoading && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -45,8 +38,8 @@ export default function NearbyCities({ weather, city, setCity, userCountry, loca
         </div>
       )}
 
-      {/* Empty state */}
-      {!nearbyLoading && !nearbyError && nearbyCities.length === 0 && (
+      {/* Empty state — only shown when not loading and nothing came back */}
+      {!nearbyLoading && nearbyCities.length === 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 4 }}>
           {[...Array(5)].map((_, i) => (
             <div key={i} style={{ height: 54, borderRadius: 12, background: T.rowBg, opacity: 0.5 + i * 0.08 }} />
@@ -91,7 +84,6 @@ export default function NearbyCities({ weather, city, setCity, userCountry, loca
               </div>
             </button>
 
-            {/* Pin/unpin button */}
             <button
               onClick={() => togglePin(item.name, item.country)}
               title={pinned ? "Unpin" : "Pin for quick access"}

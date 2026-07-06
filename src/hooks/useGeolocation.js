@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 const OWM_KEY = import.meta.env.VITE_WEATHER_API_KEY;
 
@@ -10,19 +10,13 @@ async function reverseGeocode(lat, lon) {
   return { city: json.name || null, country: json.sys?.country || null };
 }
 
-export function useGeolocation() {
+export function useGeolocation(setCity) {
   const [locationGranted, setLocationGranted] = useState(null);
   const [geoLoading,      setGeoLoading]      = useState(false);
-  const [detectedCity,    setDetectedCity]    = useState(null);
   const [userCountry,     setUserCountry]     = useState(null);
+  const [lastCoords,      setLastCoords]      = useState(null);
 
-  // FIX: raw {lat, lon} from the browser's GPS, refreshed every time
-  // geolocation succeeds — including from the "My Location" button.
-  // This is what lets MapView fly to the right spot even when the
-  // resolved city name is unchanged (so `weather` doesn't refetch).
-  const [lastCoords, setLastCoords] = useState(null);
-
-  // Ask once on mount
+  // Ask for permission once on mount
   useEffect(() => {
     if (!navigator.geolocation) { setLocationGranted(false); return; }
     setGeoLoading(true);
@@ -32,7 +26,9 @@ export function useGeolocation() {
         setLastCoords({ lat: latitude, lon: longitude });
         try {
           const { city, country } = await reverseGeocode(latitude, longitude);
-          if (city)    setDetectedCity(city);
+          // Directly call setCity from App — no intermediate detectedCity state
+          // that might not trigger a re-render if the value hasn't changed.
+          if (city)    setCity(city);
           if (country) setUserCountry(country);
         } catch { /* fall back to default city */ }
         finally { setGeoLoading(false); }
@@ -41,27 +37,29 @@ export function useGeolocation() {
     );
   }, []);
 
-  // Manual "locate me" button
-  const handleLocateMe = () => {
+  // "My Location" button — always forces city + coords to update
+  const handleLocateMe = useCallback(() => {
     if (!navigator.geolocation) return;
     setGeoLoading(true);
     navigator.geolocation.getCurrentPosition(
       async ({ coords: { latitude, longitude } }) => {
         setLocationGranted(true);
-        // FIX: always update lastCoords with a fresh object reference so
-        // MapView's effect (which depends on lastCoords) fires every click,
-        // even if the lat/lon values happen to be identical to before.
+        // Always set a fresh coords object so MapView's effect fires
+        // even if the user is already viewing their own city
         setLastCoords({ lat: latitude, lon: longitude, t: Date.now() });
         try {
           const { city, country } = await reverseGeocode(latitude, longitude);
-          if (city)    setDetectedCity(city);
+          // Directly call setCity — bypasses the detectedCity middleman
+          // that caused the bug where clicking My Location a second time
+          // while already on your city did nothing
+          if (city)    setCity(city);
           if (country) setUserCountry(country);
         } catch { /* skip */ }
         finally { setGeoLoading(false); }
       },
       () => setGeoLoading(false)
     );
-  };
+  }, [setCity]);
 
-  return { locationGranted, geoLoading, detectedCity, userCountry, setUserCountry, handleLocateMe, lastCoords };
+  return { locationGranted, geoLoading, userCountry, setUserCountry, handleLocateMe, lastCoords };
 }
